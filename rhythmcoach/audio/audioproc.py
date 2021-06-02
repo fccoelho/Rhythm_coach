@@ -11,8 +11,8 @@ class AudioHandler:
     def __init__(self):
         self.FORMAT = pyaudio.paFloat32
         self.CHANNELS = 1
-        self.RATE = 44100
-        self.CHUNK = 1024 * 2
+        self.RATE = 22050
+        self.CHUNK = 1024 * 4
         self.p = None
         self.stream = None
 
@@ -32,13 +32,17 @@ class AudioHandler:
 
     def callback(self, in_data, frame_count, time_info, flag):
         wave = np.frombuffer(in_data, dtype=np.float32)
+        if len(wave) < self.CHUNK:
+            print(len(wave))
+            return
         onset_env = librosa.onset.onset_strength(y=wave, sr=self.RATE)
-        pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr)
+        pulse = librosa.beat.plp(onset_envelope=onset_env, sr=self.RATE)
         # prior = st.lognorm(loc=np.log(120), scale=120, s=1)
         # pulse_lognorm = librosa.beat.plp(onset_envelope=onset_env, sr=sr,prior=prior)
         tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env)
         beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
-        times = librosa.times_like(onset_env, sr=sr)
+        times = librosa.times_like(onset_env, sr=self.RATE)
+        print(times)
         return None, pyaudio.paContinue
 
     def mainloop(self):
@@ -48,6 +52,7 @@ class AudioHandler:
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     y, sr = librosa.load('../../Groove_Tantan Edit 1_Tantan_Take_5.ogg')
+    print (sr)
     fig, ax = plt.subplots(nrows=5, sharex=True)
     display.waveshow(y, sr=sr, ax=ax[0])
     ax[0].set(title='Envelope view')

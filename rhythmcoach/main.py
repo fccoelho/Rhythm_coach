@@ -26,14 +26,25 @@ class Application:
         self.screen = pygame.display.get_surface()
         self.graph_size = (800, 800)
         self.AH = AudioHandler()
+        self.recording = False
         self.record_button = pw.Button(
             self.screen, 100, 100, 300, 150, text='Record',
             fontSize=50, margin=20,
             inactiveColour=(255, 0, 0),
             pressedColour=(0, 255, 0), radius=20,
-            onClick=lambda: print('Click')
+            onClick=self.on_click
         )
         self.run = True
+
+    def on_click(self):
+        if not self.recording:
+            self.record_button.set('text','Stop')
+            self.recording = True
+            self.AH.start()
+        else:
+            self.record_button.set('text','Record')
+            self.AH.stop()
+            self.recording = False
 
     def plot(self, hits):
         N = 32
