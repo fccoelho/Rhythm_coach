@@ -3,3 +3,6 @@ matplotlib
 click
 scipy
 pyaudio
+pygame
+pillow
+pygame-widgets

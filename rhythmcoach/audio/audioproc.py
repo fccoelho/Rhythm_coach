@@ -7,7 +7,6 @@ import numpy as np
 import scipy.stats as st
 import time
 
-
 class AudioHandler:
     def __init__(self):
         self.FORMAT = pyaudio.paFloat32
@@ -32,8 +31,14 @@ class AudioHandler:
         self.p.terminate()
 
     def callback(self, in_data, frame_count, time_info, flag):
-        numpy_array = np.frombuffer(in_data, dtype=np.float32)
-        librosa.feature.mfcc(numpy_array)
+        wave = np.frombuffer(in_data, dtype=np.float32)
+        onset_env = librosa.onset.onset_strength(y=wave, sr=self.RATE)
+        pulse = librosa.beat.plp(onset_envelope=onset_env, sr=sr)
+        # prior = st.lognorm(loc=np.log(120), scale=120, s=1)
+        # pulse_lognorm = librosa.beat.plp(onset_envelope=onset_env, sr=sr,prior=prior)
+        tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env)
+        beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
+        times = librosa.times_like(onset_env, sr=sr)
         return None, pyaudio.paContinue
 
     def mainloop(self):
@@ -42,7 +47,7 @@ class AudioHandler:
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    y, sr = librosa.load('Groove_Tantan Edit 1_Tantan_Take_5.ogg')
+    y, sr = librosa.load('../../Groove_Tantan Edit 1_Tantan_Take_5.ogg')
     fig, ax = plt.subplots(nrows=5, sharex=True)
     display.waveshow(y, sr=sr, ax=ax[0])
     ax[0].set(title='Envelope view')
@@ -87,6 +92,3 @@ if __name__ == '__main__':
     ax[4].xaxis.set_major_formatter(librosa.display.TimeFormatter())
     plt.savefig('analysis.png', dpi=400)
     plt.show()
-
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
