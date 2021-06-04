@@ -22,11 +22,14 @@ from rhythmcoach.audio.audioproc import AudioHandler
 class Application:
     def __init__(self):
         pygame.init()
+        self.font = pygame.font.SysFont("monospace", 50)
         window = pygame.display.set_mode(size=(1600, 800), flags=DOUBLEBUF)
         self.screen = pygame.display.get_surface()
         self.graph_size = (800, 800)
         self.AH = AudioHandler()
+        self.AH.GUI = self
         self.recording = False
+        self.label = None
         self.record_button = pw.Button(
             self.screen, 100, 100, 300, 150, text='Record',
             fontSize=50, margin=20,
@@ -38,26 +41,31 @@ class Application:
 
     def on_click(self):
         if not self.recording:
-            self.record_button.set('text','Stop')
+            self.record_button.set('text', 'Stop')
             self.recording = True
             self.AH.start()
         else:
-            self.record_button.set('text','Record')
+            self.record_button.set('text', 'Record')
             self.AH.stop()
             self.recording = False
 
+    def write_tempo(self, tempo):
+        self.label = self.font.render(f'Tempo: {tempo:.2f}', 1, (255, 255, 0), (0, 0, 0))
+        self.screen.blit(self.label, (800, 150))
+
     def cycle_plot(self, hits):
-        N = 32
+        N = len(hits)
         bottom = 8
         max_height = 4
         fig = plt.Figure()
         ax = fig.add_subplot(1, 1, 1, projection='polar')
-        beats = np.linspace(0, 16, 32, endpoint=False)
-        radii = max_height * np.random.rand(N)
-        width = 16 / N
+        ax.set_rmax(10)
+        beats = hits * 32
+        radii = max_height * np.ones(N)
+        width = 1 / 32
         bars = ax.bar(beats, radii, width=width, bottom=bottom)
 
-        self._draw_plot(fig, pos=(0,400))
+        self._draw_plot(fig, pos=(0, 300))
 
     def _draw_plot(self, fig, pos):
         canvas = agg.FigureCanvasAgg(fig)
@@ -72,17 +80,18 @@ class Application:
         fig = plt.Figure()
         ax = fig.add_subplot(1, 1, 1)
         display.waveshow(self.AH.wave, sr=self.AH.RATE, ax=ax)
-        if self.AH.beats:
-            ax.vlines(self.AH.times[self.AH.beats], min(self.AH.wave), min(self.AH.wave), alpha=0.5, color='r',
-                         linestyle='--', label='Beats')
+        if len(self.AH.beats) > 0:
+            ax.vlines(self.AH.times[self.AH.beats], -.5, .5, alpha=0.5, color='r',
+                      linestyle='--', label='Beats')
         ax.legend()
-        self._draw_plot(fig, pos=(800, 400))
+        self._draw_plot(fig, pos=(800, 300))
 
     def loop(self):
         while self.run:
-            if len(self.AH.wave)>0:
-                self.cycle_plot([11, 22])
+            if len(self.AH.wave) > 0:
+                self.cycle_plot(self.AH.times[self.AH.beats])
                 self.wave_plot()
+                self.write_tempo(self.AH.tempo)
             event = pygame.event.poll()
             if event.type == QUIT:
                 self.run = False

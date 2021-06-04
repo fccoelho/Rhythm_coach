@@ -12,16 +12,16 @@ class AudioHandler:
         self.FORMAT = pyaudio.paFloat32
         self.CHANNELS = 1
         self.RATE = 22050
-        self.CHUNK = 1024 * 8
+        self.CHUNK = 22050#1024 * 21
         self.p = None
         self.stream = None
         self.devices = {}
         self.device_index = -1
         self._get_input_device()
         self.wave = np.array([])
-        self.tempo = None
-        self.times = []
-        self.beats = []
+        self.tempo = 0
+        self.times = np.array([])
+        self.beats = np.array([], dtype=int)
 
 
     def _get_input_device(self, name="pulse"):
