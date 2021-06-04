@@ -12,9 +12,30 @@ class AudioHandler:
         self.FORMAT = pyaudio.paFloat32
         self.CHANNELS = 1
         self.RATE = 22050
-        self.CHUNK = 1024 * 4
+        self.CHUNK = 1024 * 8
         self.p = None
         self.stream = None
+        self.devices = {}
+        self.device_index = -1
+        self._get_input_device()
+        self.wave = np.array([])
+        self.tempo = None
+        self.times = []
+        self.beats = []
+
+
+    def _get_input_device(self, name="pulse"):
+        pa = pyaudio.PyAudio()
+        chosen_device_index = -1
+        for x in range(pa.get_device_count()):
+            info = pa.get_device_info_by_index(x)
+            self.devices[info['name']] = info
+            print(pa.get_device_info_by_index(x))
+            if info["name"] == name:
+                self.device_index = info["index"]
+                print(f"pulse device index: {self.device_index}")
+
+
 
     def start(self):
         self.p = pyaudio.PyAudio()
@@ -23,6 +44,7 @@ class AudioHandler:
                                   rate=self.RATE,
                                   input=True,
                                   output=False,
+                                  input_device_index=self.device_index,
                                   stream_callback=self.callback,
                                   frames_per_buffer=self.CHUNK)
 
@@ -33,16 +55,20 @@ class AudioHandler:
     def callback(self, in_data, frame_count, time_info, flag):
         wave = np.frombuffer(in_data, dtype=np.float32)
         if len(wave) < self.CHUNK:
-            print(len(wave))
+            print("Skip chunk of size: ", len(wave))
             return
+        self.wave = wave
         onset_env = librosa.onset.onset_strength(y=wave, sr=self.RATE)
         pulse = librosa.beat.plp(onset_envelope=onset_env, sr=self.RATE)
         # prior = st.lognorm(loc=np.log(120), scale=120, s=1)
         # pulse_lognorm = librosa.beat.plp(onset_envelope=onset_env, sr=sr,prior=prior)
         tempo, beats = librosa.beat.beat_track(onset_envelope=onset_env)
+        self.tempo = tempo
+        self.beats = beats
         beats_plp = np.flatnonzero(librosa.util.localmax(pulse))
         times = librosa.times_like(onset_env, sr=self.RATE)
-        print(times)
+        self.times = times
+        print(tempo, beats, times[beats])
         return None, pyaudio.paContinue
 
     def mainloop(self):
@@ -88,9 +114,9 @@ if __name__ == '__main__':
     ax[3].set(title='librosa.beat.beat_track')
     ax[3].label_outer()
     times_p = librosa.times_like(pulse, sr=sr)
-    ax[4].plot(times, librosa.util.normalize(pulse),
+    ax[4].plot(times_p, librosa.util.normalize(pulse),
                label='PLP')
-    ax[4].vlines(times[beats_plp], 0, 1, alpha=0.5, color='r',
+    ax[4].vlines(times_p[beats_plp], 0, 1, alpha=0.5, color='r',
                  linestyle='--', label='PLP Beats')
     ax[4].legend()
     ax[4].set(title='librosa.beat.plp', xlim=[5, 20])

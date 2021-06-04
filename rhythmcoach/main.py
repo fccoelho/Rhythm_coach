@@ -10,7 +10,7 @@ from pygame.locals import (DOUBLEBUF,
                            QUIT,
                            K_ESCAPE, K_UP, K_DOWN, K_RCTRL, K_LCTRL
                            )
-
+from librosa import display
 import matplotlib
 import matplotlib.pyplot as plt
 
@@ -22,7 +22,7 @@ from rhythmcoach.audio.audioproc import AudioHandler
 class Application:
     def __init__(self):
         pygame.init()
-        window = pygame.display.set_mode(size=(800, 800), flags=DOUBLEBUF)
+        window = pygame.display.set_mode(size=(1600, 800), flags=DOUBLEBUF)
         self.screen = pygame.display.get_surface()
         self.graph_size = (800, 800)
         self.AH = AudioHandler()
@@ -46,7 +46,7 @@ class Application:
             self.AH.stop()
             self.recording = False
 
-    def plot(self, hits):
+    def cycle_plot(self, hits):
         N = 32
         bottom = 8
         max_height = 4
@@ -57,18 +57,32 @@ class Application:
         width = 16 / N
         bars = ax.bar(beats, radii, width=width, bottom=bottom)
 
+        self._draw_plot(fig, pos=(0,400))
+
+    def _draw_plot(self, fig, pos):
         canvas = agg.FigureCanvasAgg(fig)
         canvas.draw()
         renderer = canvas.get_renderer()
         raw_data = renderer.tostring_rgb()
         self.graph_size = canvas.get_width_height()
         surf = pygame.image.fromstring(raw_data, self.graph_size, "RGB")
-        self.screen.blit(surf, (0, 300))
+        self.screen.blit(surf, pos)
 
+    def wave_plot(self):
+        fig = plt.Figure()
+        ax = fig.add_subplot(1, 1, 1)
+        display.waveshow(self.AH.wave, sr=self.AH.RATE, ax=ax)
+        if self.AH.beats:
+            ax.vlines(self.AH.times[self.AH.beats], min(self.AH.wave), min(self.AH.wave), alpha=0.5, color='r',
+                         linestyle='--', label='Beats')
+        ax.legend()
+        self._draw_plot(fig, pos=(800, 400))
 
     def loop(self):
         while self.run:
-            self.plot([11, 22])
+            if len(self.AH.wave)>0:
+                self.cycle_plot([11, 22])
+                self.wave_plot()
             event = pygame.event.poll()
             if event.type == QUIT:
                 self.run = False
