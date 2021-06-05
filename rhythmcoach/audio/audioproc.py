@@ -11,9 +11,10 @@ class AudioHandler:
     def __init__(self):
         self.FORMAT = pyaudio.paFloat32
         self.CHANNELS = 1
-        self.RATE = 22050
-        self.CHUNK = 22050#1024 * 21
+        self.RATE = 44100
+        self.CHUNK = 1*self.RATE
         self.p = None
+        self.GUI = None
         self.stream = None
         self.devices = {}
         self.device_index = -1
@@ -69,6 +70,7 @@ class AudioHandler:
         times = librosa.times_like(onset_env, sr=self.RATE)
         self.times = times
         print(tempo, beats, times[beats])
+        self.GUI.update_screen()
         return None, pyaudio.paContinue
 
     def mainloop(self):
@@ -121,5 +123,6 @@ if __name__ == '__main__':
     ax[4].legend()
     ax[4].set(title='librosa.beat.plp', xlim=[5, 20])
     ax[4].xaxis.set_major_formatter(librosa.display.TimeFormatter())
+    fig.tight_layout()
     plt.savefig('analysis.png', dpi=400)
     plt.show()

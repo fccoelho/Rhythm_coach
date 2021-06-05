@@ -24,6 +24,8 @@ class Application:
         pygame.init()
         self.font = pygame.font.SysFont("monospace", 50)
         window = pygame.display.set_mode(size=(1600, 800), flags=DOUBLEBUF)
+        pygame.display.set_caption('Rhythm Coach')
+        self.background = pygame.image.load('../perc.jpeg').convert()
         self.screen = pygame.display.get_surface()
         self.graph_size = (800, 800)
         self.AH = AudioHandler()
@@ -48,9 +50,10 @@ class Application:
             self.record_button.set('text', 'Record')
             self.AH.stop()
             self.recording = False
+        self.record_button.draw()
 
     def write_tempo(self, tempo):
-        self.label = self.font.render(f'Tempo: {tempo:.2f}', 1, (255, 255, 0), (0, 0, 0))
+        self.label = self.font.render(f'Tempo: {tempo:.2f} BPM', 1, (255, 255, 0), (0, 0, 0))
         self.screen.blit(self.label, (800, 150))
 
     def cycle_plot(self, hits):
@@ -58,6 +61,7 @@ class Application:
         bottom = 8
         max_height = 4
         fig = plt.Figure()
+        fig.patch.set_alpha(0.5)
         ax = fig.add_subplot(1, 1, 1, projection='polar')
         ax.set_rmax(10)
         beats = hits * 32
@@ -65,11 +69,12 @@ class Application:
         width = 1 / 32
         bars = ax.bar(beats, radii, width=width, bottom=bottom)
 
-        self._draw_plot(fig, pos=(0, 300))
+        self._draw_plot(fig, pos=(50, 300))
 
     def _draw_plot(self, fig, pos):
         canvas = agg.FigureCanvasAgg(fig)
         canvas.draw()
+        # canvas.setStyleSheet("background-color:transparent;")
         renderer = canvas.get_renderer()
         raw_data = renderer.tostring_rgb()
         self.graph_size = canvas.get_width_height()
@@ -78,6 +83,7 @@ class Application:
 
     def wave_plot(self):
         fig = plt.Figure()
+        fig.patch.set_alpha(0.5)
         ax = fig.add_subplot(1, 1, 1)
         display.waveshow(self.AH.wave, sr=self.AH.RATE, ax=ax)
         if len(self.AH.beats) > 0:
@@ -86,12 +92,14 @@ class Application:
         ax.legend()
         self._draw_plot(fig, pos=(800, 300))
 
+    def update_screen(self):
+        if len(self.AH.wave) > 0:
+            self.cycle_plot(self.AH.times[self.AH.beats])
+            self.wave_plot()
+            self.write_tempo(self.AH.tempo)
+
     def loop(self):
         while self.run:
-            if len(self.AH.wave) > 0:
-                self.cycle_plot(self.AH.times[self.AH.beats])
-                self.wave_plot()
-                self.write_tempo(self.AH.tempo)
             event = pygame.event.poll()
             if event.type == QUIT:
                 self.run = False
@@ -99,7 +107,7 @@ class Application:
                 key = event.key
                 if key == K_ESCAPE:
                     self.run = False
-
+            # self.screen.blit(self.background, (0,0))
             self.record_button.listen(event)
             self.record_button.draw()
             pygame.display.flip()
